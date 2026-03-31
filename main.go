@@ -45,9 +45,11 @@ func main() {
 
 	logMsg := fmt.Sprintf("[%s] %s\n", time.Now().Format(time.RFC3339), fullCmd)
 	if len(args) > 0 {
-		f, _ := os.OpenFile(conf.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString(logMsg)
-		f.Close()
+		f, err := os.OpenFile(conf.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err == nil {
+			_, _ = f.WriteString(logMsg)
+			_ = f.Close()
+		}
 	}
 
 	if err := command.VerifyAccess(fullCmd, conf); err != nil {
@@ -56,7 +58,7 @@ func main() {
 	}
 
 	os.Clearenv()
-	os.Setenv("PATH", "/usr/bin:/bin")
+	_ = os.Setenv("PATH", "/usr/bin:/bin")
 
 	newArgs := []string{"-i", KeyPath, "-o", "StrictHostKeyChecking=no"}
 	newArgs = append(newArgs, args...)
