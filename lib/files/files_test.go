@@ -12,11 +12,13 @@ func TestVerifySecurity_Valid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
+	_ = tmpFile.Close()
 
 	uid := uint32(os.Getuid())
-	os.Chmod(tmpFile.Name(), 0600)
+	_ = os.Chmod(tmpFile.Name(), 0600)
 
 	err = VerifySecurity(tmpFile.Name(), uid, 0600)
 	assert.NoError(t, err)
@@ -28,8 +30,8 @@ func TestVerifySecurity_MissingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	nonexistentPath := tmpFile.Name()
-	tmpFile.Close()
-	os.Remove(nonexistentPath)
+	_ = tmpFile.Close()
+	_ = os.Remove(nonexistentPath)
 
 	err = VerifySecurity(nonexistentPath, 0, 0600)
 	assert.Error(t, err)
@@ -41,10 +43,12 @@ func TestVerifySecurity_WrongUid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
+	_ = tmpFile.Close()
 
-	os.Chmod(tmpFile.Name(), 0600)
+	_ = os.Chmod(tmpFile.Name(), 0600)
 
 	err = VerifySecurity(tmpFile.Name(), 9999, 0600)
 	assert.Error(t, err)
@@ -56,10 +60,12 @@ func TestVerifySecurity_InsecurePermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
+	_ = tmpFile.Close()
 
-	os.Chmod(tmpFile.Name(), 0777)
+	_ = os.Chmod(tmpFile.Name(), 0777)
 
 	uid := uint32(os.Getuid())
 	err = VerifySecurity(tmpFile.Name(), uid, 0600)
@@ -72,12 +78,16 @@ func TestVerifySecurity_Symlink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
+	_ = tmpFile.Close()
 
 	tmpLink := tmpFile.Name() + ".link"
-	os.Symlink(tmpFile.Name(), tmpLink)
-	defer os.Remove(tmpLink)
+	_ = os.Symlink(tmpFile.Name(), tmpLink)
+	defer func() {
+		_ = os.Remove(tmpLink)
+	}()
 
 	uid := uint32(os.Getuid())
 	err = VerifySecurity(tmpLink, uid, 0600)
