@@ -2,5 +2,13 @@ version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
+    commit-message:
+      prefix: "chore"
+    schedule:
+      interval: weekly
+  - package-ecosystem: uv
+    directory: /
+    commit-message:
+      prefix: "chore"
     schedule:
       interval: weekly

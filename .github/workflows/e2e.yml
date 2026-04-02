@@ -14,9 +14,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run check, linter
+        run: |
+          uv sync --locked --all-extras --dev
+          uvx ruff check .
+          uvx ruff format . --check
+
       - name: Run E2E tests
         run: |
-          ./e2e/run-e2e.sh
+          uvx pytest -v --log-cli-level=INFO -s
 
       - name: Upload logs on failure
         if: failure()

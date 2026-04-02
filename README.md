@@ -83,8 +83,7 @@ See `test-compose.yaml` for a complete Docker Compose example with secrets handl
 Tests run entirely locally via Docker Compose — no secrets are stored anywhere. A fresh SSH key pair is generated on every run.
 
 ```bash
-cd e2e
-./run_e2e.sh
+uvx pytest -v --log-cli-level=INFO -s
 ```
 
 The test suite spins up two containers: `test-app` (the wrapper image) and `git-server` (a local SSH git server). It verifies that:
@@ -108,9 +107,14 @@ Tests also run in GitHub Actions on every push and pull request, with no secrets
 ├── test-compose.yaml        # e2e test environment
 ├── docker-entrypoint.sh     # sets permissions, drops to uid 1000
 └── e2e/
-    └── run_e2e.sh           # test runner
+    └── test_e2e.py          # test runner
 ```
 
 ## License
 
 Apache 2.0
+
+## TODO
+
+- Add s6 overlay
+- pytest class, and add more tests
