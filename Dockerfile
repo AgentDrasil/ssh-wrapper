@@ -44,5 +44,3 @@ RUN mkdir -p /etc/ssh-wrapper && \
 
 # 4. Create low-privilege user
 RUN adduser -D -u 1000 user
-USER user
-WORKDIR /home/user
