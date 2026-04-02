@@ -1,0 +1,7 @@
+logpath: /var/log/ssh-wrapper/ssh-wrapper.log
+ 
+allowed:
+  - host: git-server
+    users:
+      - repos
+ 

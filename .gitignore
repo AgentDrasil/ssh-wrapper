@@ -1,1 +1,3 @@
-example-compose.yaml
+test-data/logs
+test-data/keys
+test-data/repos

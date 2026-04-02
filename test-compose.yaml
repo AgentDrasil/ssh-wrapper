@@ -1,0 +1,40 @@
+services:
+  test-app:
+    build:
+      context: .
+    depends_on:
+      git-server:
+        condition: service_healthy
+    environment:
+      - GIT_AUTHOR_NAME=e2e-test
+      - GIT_AUTHOR_EMAIL=e2e@test.local
+      - GIT_COMMITTER_NAME=e2e-test
+      - GIT_COMMITTER_EMAIL=e2e@test.local
+    secrets:
+      - source: ssh_key
+        target: /run/secrets/key
+      - source: ssh_config
+        target: /run/secrets/config.yaml
+    volumes:
+      - ./test-data/logs:/var/log/ssh-wrapper
+      - ./test-data/docker-entrypoint.sh:/bin/docker-entrypoint.sh
+    # avoid exit
+    command: ["/bin/docker-entrypoint.sh"]
+
+  git-server:
+    image: jkarlos/git-server-docker
+    container_name: git-server
+    volumes:
+      - ./test-data/keys:/git-server/keys
+      - ./test-data/repos:/git-server/repos
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "22"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+secrets:
+  ssh_key:
+    file: test-data/keys/id_ed25519
+  ssh_config:
+    file: test-data/config.yaml

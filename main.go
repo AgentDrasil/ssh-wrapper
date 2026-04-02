@@ -56,11 +56,11 @@ func main() {
 
 	if err := command.VerifyAccess(fullCmd, conf); err != nil {
 		fmt.Fprintf(os.Stderr, "Access Denied: %v\n", err)
-		logMsg := fmt.Sprintf("[%s] denied command: git %s\n", time.Now().Format(time.RFC3339), fullCmd)
+		logMsg := fmt.Sprintf("[%s] denied command: ssh %s\n", time.Now().Format(time.RFC3339), fullCmd)
 		_, _ = logfile.WriteString(logMsg)
 		os.Exit(1)
 	}
-	logMsg := fmt.Sprintf("[%s] allowed command: git %s\n", time.Now().Format(time.RFC3339), fullCmd)
+	logMsg := fmt.Sprintf("[%s] allowed command: ssh %s\n", time.Now().Format(time.RFC3339), fullCmd)
 	_, _ = logfile.WriteString(logMsg)
 
 	os.Clearenv()
