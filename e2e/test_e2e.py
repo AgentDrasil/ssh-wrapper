@@ -10,7 +10,6 @@ COMPOSE_FILE = (Path(__file__).parent.parent / "test-compose.yaml").resolve()
 KEYS_DIR = TEST_DATA / "keys"
 REPOS_DIR = TEST_DATA / "repos"
 LOGS_DIR = TEST_DATA / "logs"
-HOST_LOG_FILE = LOGS_DIR / "ssh-wrapper.log"
 
 
 class TestE2E:
@@ -105,17 +104,17 @@ class TestE2E:
     )
     return result.returncode, result.stdout, result.stderr
 
+  CONTAINER_LOG_FILE = "/var/log/ssh-wrapper/ssh-wrapper.log"
+
   def setup_method(self):
-    if HOST_LOG_FILE.exists():
-      HOST_LOG_FILE.unlink()
+    self.exec_in_test_app(f"rm -f {self.CONTAINER_LOG_FILE}")
 
   def teardown_method(self):
-    if HOST_LOG_FILE.exists():
-      HOST_LOG_FILE.unlink()
+    self.exec_in_test_app(f"rm -f {self.CONTAINER_LOG_FILE}")
 
   def assert_in_log(self, expected: str):
-    assert HOST_LOG_FILE.exists(), "Log file was not created"
-    log = HOST_LOG_FILE.read_text()
+    _, log, _ = self.exec_in_test_app(f"cat {self.CONTAINER_LOG_FILE}")
+    assert log.strip(), "Log file was not created or is empty"
     assert expected in log
 
   def test_git_clone_from_allowed_host(self):
