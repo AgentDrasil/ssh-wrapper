@@ -18,7 +18,6 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o ssh-wrapper .
 
 # --- Stage 2: Runtime stage ---
-ARG ALPINE_VERSION=3.19
 FROM alpine:${ALPINE_VERSION}
 
 # Install required tools

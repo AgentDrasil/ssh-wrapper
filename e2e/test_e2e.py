@@ -3,7 +3,8 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import Tuple
+
+logger = logging.getLogger(__name__)
 
 TEST_DATA = (Path(__file__).parent.parent / "test-data").resolve()
 COMPOSE_FILE = (Path(__file__).parent.parent / "test-compose.yaml").resolve()
@@ -15,7 +16,7 @@ LOGS_DIR = TEST_DATA / "logs"
 class TestE2E:
   @classmethod
   def exec_in_host(cls, cmd: list[str]) -> None:
-    logging.info(f"exec_in_host: {' '.join(cmd)}")
+    logger.info(f"exec_in_host: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
   @classmethod
@@ -83,8 +84,8 @@ class TestE2E:
     cls.stop_docker_compose()
 
   @staticmethod
-  def exec_in_test_app(cmd: str) -> Tuple[int, str, str]:
-    logging.info(f"exec_in_test_app: {cmd}")
+  def exec_in_test_app(cmd: str) -> tuple[int, str, str]:
+    logger.info(f"exec_in_test_app: {cmd}")
     result = subprocess.run(
       [
         "docker",
@@ -101,6 +102,7 @@ class TestE2E:
       ],
       capture_output=True,
       text=True,
+      check=False,
     )
     return result.returncode, result.stdout, result.stderr
 
@@ -119,7 +121,7 @@ class TestE2E:
 
   def test_git_clone_from_allowed_host(self):
     self.exec_in_test_app("rm -rf /tmp/repo1")
-    code, stdout, stderr = self.exec_in_test_app(
+    code, _stdout, stderr = self.exec_in_test_app(
       "git clone git@git-server:/git-server/repos/repo1 /tmp/repo1"
     )
     assert code == 0, f"git clone failed: {stderr}"
@@ -128,7 +130,7 @@ class TestE2E:
     )
 
   def test_git_commit_and_push(self):
-    code, stdout, stderr = self.exec_in_test_app(
+    code, _stdout, stderr = self.exec_in_test_app(
       "cd /tmp/repo1 && echo 'e2e marker' > marker.txt && "
       "git add marker.txt && "
       "git commit -m 'e2e: marker commit' && "
@@ -140,7 +142,7 @@ class TestE2E:
     )
 
   def test_git_pull(self):
-    code, stdout, stderr = self.exec_in_test_app("cd /tmp/repo1 && git pull")
+    code, _stdout, stderr = self.exec_in_test_app("cd /tmp/repo1 && git pull")
     assert code == 0, f"git pull failed: {stderr}"
     self.assert_in_log(
       "allowed command: ssh -o SendEnv=GIT_PROTOCOL git@git-server git-upload-pack '/git-server/repos/repo1'"
@@ -169,7 +171,7 @@ class TestE2E:
     )
 
   def test_ssh_to_disallowed_host_blocked(self):
-    code, stdout, stderr = self.exec_in_test_app("ssh git@not-allowed-host echo hi 2>&1 || true")
+    _code, stdout, stderr = self.exec_in_test_app("ssh git@not-allowed-host echo hi 2>&1 || true")
     combined = stdout + stderr
     assert "Access Denied" in combined, f"Disallowed host was not blocked: {combined}"
     self.assert_in_log("denied command: ssh git@not-allowed-host echo hi")
