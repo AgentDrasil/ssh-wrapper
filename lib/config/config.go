@@ -6,12 +6,16 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
+type AllowedRule struct {
+	Host       string   `yaml:"host"`
+	Hostname   string   `yaml:"hostname"`
+	KeyPath    string   `yaml:"key_path"`
+	PathPrefix []string `yaml:"path_prefix"`
+}
+
 type Config struct {
-	Allowed []struct {
-		Host       string   `yaml:"host"`
-		PathPrefix []string `yaml:"path_prefix"`
-	} `yaml:"allowed"`
-	LogPath string `yaml:"logpath"`
+	Allowed []AllowedRule `yaml:"allowed"`
+	LogPath string        `yaml:"logpath"`
 }
 
 func ReadConfig(path string) (*Config, error) {

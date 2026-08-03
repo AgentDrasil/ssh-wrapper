@@ -37,4 +37,4 @@ secrets:
   ssh_key:
     file: test-data/keys/id_ed25519
   ssh_config:
-    file: test-data/config.yaml
+    file: test-data/ssh.config.yaml

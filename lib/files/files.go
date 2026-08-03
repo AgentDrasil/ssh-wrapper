@@ -34,3 +34,29 @@ func VerifySecurity(path string, expectedUid uint32, expectedMode os.FileMode) e
 
 	return nil
 }
+
+func VerifyDirectorySecurity(dirPath string, expectedUid uint32, expectedDirMode os.FileMode) error {
+	info, err := os.Lstat(dirPath)
+	if err != nil {
+		return ErrMissingFile
+	}
+
+	if !info.IsDir() {
+		return errors.New("path is not a directory")
+	}
+
+	if info.Mode()&os.ModeSymlink != 0 {
+		return ErrIsSymlink
+	}
+
+	stat := info.Sys().(*syscall.Stat_t)
+	if stat.Uid != expectedUid {
+		return ErrNotOwnedByUid
+	}
+
+	if info.Mode().Perm() != expectedDirMode {
+		return ErrInsecurePerms
+	}
+
+	return nil
+}

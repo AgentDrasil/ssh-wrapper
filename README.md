@@ -39,18 +39,24 @@ The agent can only reach hosts explicitly listed in `config.yaml`. Everything el
 
 Mount two files into the container as root-owned secrets:
 
-**`/etc/config.yaml`** — the config of the ssh-wrapper, mode 0400, owned by root.
+**`/etc/ssh.config.yaml`** — the config of the ssh-wrapper, mode 0400, owned by root.
 
 ```yaml
 logpath: /var/log/ssh-wrapper/ssh-wrapper.log
 
 allowed:
-  - host: github.com
+  - host: ghhy                      # Host alias (used in git clone git@ghhy:...)
+    hostname: github.com            # Real hostname sent to SSH
+    key_path: /etc/keys/ghhy_key    # Custom key for this host (mode 0400, owned by root)
+    path_prefix:
+      - elmhuangyu/
+
+  - host: github.com                # Fallback to default key (/etc/keys/key)
     path_prefix:
       - elmhuangyu/
 ```
 
-**`/etc/key`** — the private key, mode 0400, owned by root.
+**`/etc/keys/`** — root-owned directory (`0700`) containing keys, where `/etc/keys/key` is the default private key (`0400`).
 
 ## Docker Usage
 

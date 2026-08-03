@@ -15,22 +15,27 @@ import (
 const (
 	rootUID = 0
 
-	ConfigPath = "/etc/config.yaml"
-	KeyPath    = "/etc/key"
+	ConfigPath = "/etc/ssh.config.yaml"
+	KeysDir    = "/etc/keys"
+	DefaultKey = "/etc/keys/key"
 	RealSSH    = "/usr/bin/ssh.orig"
 )
 
 func main() {
 	if err := files.VerifySecurity(ConfigPath, rootUID, 0400); err != nil {
-		fmt.Fprintf(os.Stderr, "Security Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Security Error (ConfigPath): %v\n", err)
 		os.Exit(1)
 	}
-	if err := files.VerifySecurity(KeyPath, rootUID, 0400); err != nil {
-		fmt.Fprintf(os.Stderr, "Security Error: %v\n", err)
+	if err := files.VerifyDirectorySecurity(KeysDir, rootUID, 0700); err != nil {
+		fmt.Fprintf(os.Stderr, "Security Error (KeysDir): %v\n", err)
+		os.Exit(1)
+	}
+	if err := files.VerifySecurity(DefaultKey, rootUID, 0400); err != nil {
+		fmt.Fprintf(os.Stderr, "Security Error (DefaultKey): %v\n", err)
 		os.Exit(1)
 	}
 	if err := files.VerifySecurity(RealSSH, rootUID, 0700); err != nil {
-		fmt.Fprintf(os.Stderr, "Security Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Security Error (RealSSH): %v\n", err)
 		os.Exit(1)
 	}
 
@@ -54,7 +59,8 @@ func main() {
 		}
 	}()
 
-	if err := command.VerifyAccess(fullCmd, conf); err != nil {
+	rule, err := command.VerifyAccess(fullCmd, conf)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Access Denied: %v\n", err)
 		logMsg := fmt.Sprintf("[%s] denied command: ssh %s\n", time.Now().Format(time.RFC3339), fullCmd)
 		_, _ = logfile.WriteString(logMsg)
@@ -63,11 +69,30 @@ func main() {
 	logMsg := fmt.Sprintf("[%s] allowed command: ssh %s\n", time.Now().Format(time.RFC3339), fullCmd)
 	_, _ = logfile.WriteString(logMsg)
 
+	keyToUse := DefaultKey
+	if rule.KeyPath != "" {
+		keyToUse = rule.KeyPath
+		if err := files.VerifySecurity(keyToUse, rootUID, 0400); err != nil {
+			fmt.Fprintf(os.Stderr, "Security Error (Rule KeyPath '%s'): %v\n", keyToUse, err)
+			os.Exit(1)
+		}
+	}
+
 	os.Clearenv()
 	_ = os.Setenv("PATH", "/usr/bin:/bin")
 
-	newArgs := []string{"-i", KeyPath, "-o", "StrictHostKeyChecking=no"}
-	newArgs = append(newArgs, args...)
+	finalArgs := make([]string, len(args))
+	copy(finalArgs, args)
+	if rule.Hostname != "" && rule.Host != "" {
+		for i, arg := range finalArgs {
+			if strings.Contains(arg, "@"+rule.Host) {
+				finalArgs[i] = strings.Replace(arg, "@"+rule.Host, "@"+rule.Hostname, 1)
+			}
+		}
+	}
+
+	newArgs := []string{"-i", keyToUse, "-o", "StrictHostKeyChecking=no"}
+	newArgs = append(newArgs, finalArgs...)
 
 	cmd := exec.Command(RealSSH, newArgs...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr

@@ -153,13 +153,16 @@ func TestIsBasicHandshake(t *testing.T) {
 
 func TestVerifyAccess(t *testing.T) {
 	conf := &config.Config{
-		Allowed: []struct {
-			Host       string   `yaml:"host"`
-			PathPrefix []string `yaml:"path_prefix"`
-		}{
+		Allowed: []config.AllowedRule{
 			{
 				Host:       "github.com",
 				PathPrefix: []string{"user1/", "user2/"},
+			},
+			{
+				Host:       "ghhy",
+				Hostname:   "github.com",
+				KeyPath:    "/etc/keys/ghhy_key",
+				PathPrefix: []string{"user1/"},
 			},
 		},
 	}
@@ -169,11 +172,18 @@ func TestVerifyAccess(t *testing.T) {
 		cmd          string
 		expectErr    bool
 		errInclusive string
+		expectedKey  string
 	}{
 		{
 			name:      "allowed namespace",
 			cmd:       "clone 'git@github.com:user1/repo.git'",
 			expectErr: false,
+		},
+		{
+			name:        "allowed namespace with alias ghhy",
+			cmd:         "clone 'git@ghhy:user1/repo.git'",
+			expectErr:   false,
+			expectedKey: "/etc/keys/ghhy_key",
 		},
 		{
 			name:         "disallowed path prefix",
@@ -208,12 +218,15 @@ func TestVerifyAccess(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifyAccess(tt.cmd, conf)
+			rule, err := VerifyAccess(tt.cmd, conf)
 			if tt.expectErr {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errInclusive)
 			} else {
 				assert.NoError(t, err)
+				if tt.expectedKey != "" {
+					assert.Equal(t, tt.expectedKey, rule.KeyPath)
+				}
 			}
 		})
 	}

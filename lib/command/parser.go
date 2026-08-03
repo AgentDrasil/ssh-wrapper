@@ -43,17 +43,17 @@ func parseHost(cmd string) string {
 	return ""
 }
 
-func isHostAllowed(cmd string, conf *config.Config) bool {
+func isHostAllowed(cmd string, conf *config.Config) *config.AllowedRule {
 	host := parseHost(cmd)
 	if host == "" {
-		return false
+		return nil
 	}
 	for _, entry := range conf.Allowed {
 		if entry.Host == host {
-			return true
+			return &entry
 		}
 	}
-	return false
+	return nil
 }
 
 func IsGitCommand(cmd string) bool {
@@ -64,7 +64,7 @@ func IsBasicHandshake(cmd string) bool {
 	return !IsGitCommand(cmd)
 }
 
-func VerifyAccess(cmd string, conf *config.Config) error {
+func VerifyAccess(cmd string, conf *config.Config) (*config.AllowedRule, error) {
 	path := parsePath(cmd)
 	host := parseHost(cmd)
 
@@ -73,18 +73,19 @@ func VerifyAccess(cmd string, conf *config.Config) error {
 			if entry.Host == host {
 				for _, prefix := range entry.PathPrefix {
 					if strings.HasPrefix(path, prefix) {
-						return nil
+						return &entry, nil
 					}
 				}
 			}
 		}
-		return fmt.Errorf("%w: host '%s', path '%s' does not match any allowed path_prefix", ErrAccessDenied, host, path)
+		return nil, fmt.Errorf("%w: host '%s', path '%s' does not match any allowed path_prefix", ErrAccessDenied, host, path)
 	} else if IsBasicHandshake(cmd) {
-		if isHostAllowed(cmd, conf) {
-			return nil
+		rule := isHostAllowed(cmd, conf)
+		if rule != nil {
+			return rule, nil
 		}
-		return fmt.Errorf("%w: host '%s' is not in allowlist", ErrAccessDenied, host)
+		return nil, fmt.Errorf("%w: host '%s' is not in allowlist", ErrAccessDenied, host)
 	}
 
-	return ErrAccessDenied
+	return nil, ErrAccessDenied
 }
