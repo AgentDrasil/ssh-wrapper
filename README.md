@@ -58,31 +58,59 @@ allowed:
 
 **`/etc/keys/`** — root-owned directory (`0700`) containing keys, where `/etc/keys/key` is the default private key (`0400`).
 
-## Docker Usage
+## Docker & Asgard Usage
+
+The recommended approach to configure `ssh-wrapper` (for Asgard or other custom agent images) is to write a **custom Dockerfile** extending `asgard` (or `asgard-base-devtool`).
+
+In this Dockerfile:
+1. Copy the configuration file to `/etc/ssh.config.yaml` and set its ownership to `root:root` and permission to `0400`.
+2. Copy SSH private keys to `/etc/keys/` and set ownership to `root:root` with directory permission `0700` and key file permission `0400`.
+3. Create the log directory (e.g. `/var/log/ssh-wrapper`) if specified in `ssh.config.yaml`.
+4. Switch to the unprivileged user (`USER user`) before running Asgard.
+
+### Example Custom Dockerfile
 
 ```dockerfile
-FROM ghcr.io/AgentDrasil/ssh-wrapper
+FROM ghcr.io/agentdrasil/asgard:latest
+
+# 1. Copy config and set strict root-only permissions (0400)
+COPY config/ssh.config.yaml /etc/ssh.config.yaml
+RUN chown root:root /etc/ssh.config.yaml && \
+    chmod 0400 /etc/ssh.config.yaml
+
+# 2. Copy SSH keys into /etc/keys/ with strict permissions
+COPY keys/ /etc/keys/
+RUN chown -R root:root /etc/keys && \
+    chmod 0700 /etc/keys && \
+    chmod 0400 /etc/keys/*
+
+# 3. Prepare log directory
+RUN mkdir -p /var/log/ssh-wrapper && \
+    chmod 777 /var/log/ssh-wrapper
+
+# 4. Drop privileges to non-root user
+USER user
+
+# 5. Start Asgard
+CMD ["asgard"]
 ```
 
-Or build from source:
+### Example `ssh.config.yaml`
 
-```bash
-docker build -t ssh-wrapper .
+```yaml
+logpath: /var/log/ssh-wrapper/ssh-wrapper.log
+
+allowed:
+  - host: ghhy                      # Host alias (used in git clone git@ghhy:...)
+    hostname: github.com            # Real hostname sent to SSH
+    key_path: /etc/keys/ghhy_key    # Custom key for this host (mode 0400, owned by root)
+    path_prefix:
+      - my-org/
+
+  - host: github.com                # Host matching github.com (uses default key /etc/keys/key)
+    path_prefix:
+      - my-org/
 ```
-
-Run the container with secrets injected by the entrypoint (which must run as root before dropping to uid 1000):
-
-```bash
-docker run \
-  -v ./my-key:/run/secrets/ssh_key:ro \
-  -v ./config.yaml:/run/secrets/ssh_config:ro \
-  -v ./logs:/var/log/ssh-wrapper \
-  ssh-wrapper
-```
-
-The entrypoint copies the secrets to `/etc/key` and `/etc/config.yaml` with correct ownership and permissions, then drops to uid 1000 before handing off to the agent process.
-
-See `test-compose.yaml` for a complete Docker Compose example with secrets handling.
 
 ## E2E Tests
 
