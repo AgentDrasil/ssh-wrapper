@@ -36,10 +36,10 @@ COPY --from=builder /app/ssh-wrapper /usr/bin/ssh
 RUN chown 0:0 /usr/bin/ssh && \
     chmod 4755 /usr/bin/ssh
 
-# 3. Create config directory (Secrets will be mounted here)
-RUN mkdir -p /etc/ssh-wrapper && \
-    chown 0:0 /etc/ssh-wrapper && \
-    chmod 700 /etc/ssh-wrapper
+# 3. Create keys directory (Secrets will be mounted here)
+RUN mkdir -p /etc/keys && \
+    chown 0:0 /etc/keys && \
+    chmod 700 /etc/keys
 
 # 4. Create low-privilege user
 RUN adduser -D -u 1000 user
