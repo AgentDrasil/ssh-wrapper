@@ -175,3 +175,19 @@ class TestE2E:
     combined = stdout + stderr
     assert "Access Denied" in combined, f"Disallowed host was not blocked: {combined}"
     self.assert_in_log("denied command: ssh git@not-allowed-host echo hi")
+
+  def test_non_git_command_with_quotes_on_host_without_path_prefix(self):
+    # The wrapper must allow it (host without path_prefix, not a git command).
+    # git-server only serves git commands, so the remote side refuses it: exit != 0.
+    code, stdout, stderr = self.exec_in_test_app(
+      "ssh git@open-server "
+      '''"docker rm helper; docker run -v caddy-cert:/data --name helper busybox sh -c 'ls -lRa /data/'"'''
+    )
+    combined = stdout + stderr
+    logger.info(f"remote answer: code={code} output={combined!r}")
+    assert "Access Denied" not in combined, f"Blocked by the wrapper: {combined}"
+    assert code != 0, f"git-server should refuse a non-git command: {combined}"
+    self.assert_in_log(
+      "allowed command: ssh git@open-server docker rm helper; docker run "
+      "-v caddy-cert:/data --name helper busybox sh -c 'ls -lRa /data/'"
+    )

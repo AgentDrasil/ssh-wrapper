@@ -65,26 +65,29 @@ func IsBasicHandshake(cmd string) bool {
 }
 
 func VerifyAccess(cmd string, conf *config.Config) (*config.AllowedRule, error) {
-	path := parsePath(cmd)
 	host := parseHost(cmd)
 
+	rule := isHostAllowed(cmd, conf)
+	if rule == nil {
+		return nil, fmt.Errorf("%w: host '%s' is not in allowlist", ErrAccessDenied, host)
+	}
+
+	// No path_prefix: path matching is skipped for non-git commands.
+	// Git commands still need an explicit path_prefix to be allowed.
+	if len(rule.PathPrefix) == 0 && !IsGitCommand(cmd) {
+		return rule, nil
+	}
+
+	path := parsePath(cmd)
 	if path != "" {
-		for _, entry := range conf.Allowed {
-			if entry.Host == host {
-				for _, prefix := range entry.PathPrefix {
-					if strings.HasPrefix(path, prefix) {
-						return &entry, nil
-					}
-				}
+		for _, prefix := range rule.PathPrefix {
+			if strings.HasPrefix(path, prefix) {
+				return rule, nil
 			}
 		}
 		return nil, fmt.Errorf("%w: host '%s', path '%s' does not match any allowed path_prefix", ErrAccessDenied, host, path)
 	} else if IsBasicHandshake(cmd) {
-		rule := isHostAllowed(cmd, conf)
-		if rule != nil {
-			return rule, nil
-		}
-		return nil, fmt.Errorf("%w: host '%s' is not in allowlist", ErrAccessDenied, host)
+		return rule, nil
 	}
 
 	return nil, ErrAccessDenied
