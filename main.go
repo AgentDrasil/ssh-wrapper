@@ -59,7 +59,7 @@ func main() {
 		}
 	}()
 
-	rule, err := command.VerifyAccess(fullCmd, conf)
+	rule, err := command.VerifyAccess(args, conf)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Access Denied: %v\n", err)
 		logMsg := fmt.Sprintf("[%s] denied command: ssh %s\n", time.Now().Format(time.RFC3339), fullCmd)

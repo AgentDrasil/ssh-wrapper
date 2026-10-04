@@ -1,7 +1,11 @@
 logpath: /var/log/ssh-wrapper/ssh-wrapper.log
- 
+
 allowed:
   - host: git-server
     path_prefix:
       - /git-server/repos/repo1
- 
+
+  # Same container, no path_prefix: used to check non-git commands
+  - host: open-server
+    hostname: git-server
+

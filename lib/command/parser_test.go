@@ -10,49 +10,49 @@ import (
 func TestParsePath(t *testing.T) {
 	tests := []struct {
 		name     string
-		cmd      string
+		args     []string
 		expected string
 	}{
 		{
 			name:     "git clone with colon format",
-			cmd:      "clone 'git@github.com:user/repo.git'",
+			args:     []string{"clone", "'git@github.com:user/repo.git'"},
 			expected: "user/repo.git",
 		},
 		{
 			name:     "git clone with slash format",
-			cmd:      "clone 'ssh://git@github.com/user/repo.git'",
+			args:     []string{"clone", "'ssh://git@github.com/user/repo.git'"},
 			expected: "user/repo.git",
 		},
 		{
 			name:     "git clone git-server",
-			cmd:      "clone 'git@git-server:/git-server/repos/repo1'",
+			args:     []string{"clone", "'git@git-server:/git-server/repos/repo1'"},
 			expected: "/git-server/repos/repo1",
 		},
 		{
 			name:     "path without host",
-			cmd:      "clone '/user/repo.git'",
+			args:     []string{"clone", "'/user/repo.git'"},
 			expected: "/user/repo.git",
 		},
 		{
 			name:     "path without host no slash",
-			cmd:      "'user/repo.git'",
+			args:     []string{"'user/repo.git'"},
 			expected: "user/repo.git",
 		},
 		{
 			name:     "no match",
-			cmd:      "some other command",
+			args:     []string{"some", "other", "command"},
 			expected: "",
 		},
 		{
 			name:     "empty string",
-			cmd:      "",
+			args:     nil,
 			expected: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parsePath(tt.cmd)
+			result := parsePath(tt.args)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -61,34 +61,34 @@ func TestParsePath(t *testing.T) {
 func TestParseHost(t *testing.T) {
 	tests := []struct {
 		name     string
-		cmd      string
+		args     []string
 		expected string
 	}{
 		{
 			name:     "github.com",
-			cmd:      "ssh -T git@github.com",
+			args:     []string{"ssh", "-T", "git@github.com"},
 			expected: "github.com",
 		},
 		{
 			name:     "bitbucket.org",
-			cmd:      "ssh -T git@bitbucket.org",
+			args:     []string{"ssh", "-T", "git@bitbucket.org"},
 			expected: "bitbucket.org",
 		},
 		{
 			name:     "no host",
-			cmd:      "git-upload-pack user/repo",
+			args:     []string{"git-upload-pack", "user/repo"},
 			expected: "",
 		},
 		{
 			name:     "empty string",
-			cmd:      "",
+			args:     nil,
 			expected: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseHost(tt.cmd)
+			result := parseHost(tt.args)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -97,29 +97,29 @@ func TestParseHost(t *testing.T) {
 func TestIsGitCommand(t *testing.T) {
 	tests := []struct {
 		name     string
-		cmd      string
+		args     []string
 		expected bool
 	}{
 		{
 			name:     "contains git-upload-pack",
-			cmd:      "git-upload-pack user/repo",
+			args:     []string{"git-upload-pack", "user/repo"},
 			expected: true,
 		},
 		{
 			name:     "contains git-receive-pack",
-			cmd:      "git-receive-pack user/repo",
+			args:     []string{"git-receive-pack", "user/repo"},
 			expected: true,
 		},
 		{
 			name:     "regular ssh command",
-			cmd:      "ssh git@github.com",
+			args:     []string{"ssh", "git@github.com"},
 			expected: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsGitCommand(tt.cmd)
+			result := IsGitCommand(tt.args)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -128,24 +128,24 @@ func TestIsGitCommand(t *testing.T) {
 func TestIsBasicHandshake(t *testing.T) {
 	tests := []struct {
 		name     string
-		cmd      string
+		args     []string
 		expected bool
 	}{
 		{
 			name:     "non-git command",
-			cmd:      "ssh -T git@github.com",
+			args:     []string{"ssh", "-T", "git@github.com"},
 			expected: true,
 		},
 		{
 			name:     "git command",
-			cmd:      "git-upload-pack user/repo",
+			args:     []string{"git-upload-pack", "user/repo"},
 			expected: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsBasicHandshake(tt.cmd)
+			result := IsBasicHandshake(tt.args)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -169,48 +169,48 @@ func TestVerifyAccess(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		cmd          string
+		args         []string
 		expectErr    bool
 		errInclusive string
 		expectedKey  string
 	}{
 		{
 			name:      "allowed namespace",
-			cmd:       "clone 'git@github.com:user1/repo.git'",
+			args:      []string{"clone", "'git@github.com:user1/repo.git'"},
 			expectErr: false,
 		},
 		{
 			name:        "allowed namespace with alias ghhy",
-			cmd:         "clone 'git@ghhy:user1/repo.git'",
+			args:        []string{"clone", "'git@ghhy:user1/repo.git'"},
 			expectErr:   false,
 			expectedKey: "/etc/keys/ghhy_key",
 		},
 		{
 			name:         "disallowed path prefix",
-			cmd:          "clone 'git@github.com:user3/repo.git'",
+			args:         []string{"clone", "'git@github.com:user3/repo.git'"},
 			expectErr:    true,
 			errInclusive: "path_prefix",
 		},
 		{
 			name:         "disallowed host namespace",
-			cmd:          "clone 'git@ggithub.com:user1/repo.git'",
+			args:         []string{"clone", "'git@ggithub.com:user1/repo.git'"},
 			expectErr:    true,
 			errInclusive: "ggithub.com",
 		},
 		{
 			name:      "basic handshake allowed",
-			cmd:       "ssh -T git@github.com",
+			args:      []string{"ssh", "-T", "git@github.com"},
 			expectErr: false,
 		},
 		{
 			name:         "disallowed host handshake",
-			cmd:          "ssh -T git@ggithub.com",
+			args:         []string{"ssh", "-T", "git@ggithub.com"},
 			expectErr:    true,
 			errInclusive: "ggithub.com",
 		},
 		{
 			name:         "git command without namespace",
-			cmd:          "git-upload-pack user3/repo",
+			args:         []string{"git-upload-pack", "user3/repo"},
 			expectErr:    true,
 			errInclusive: "access denied",
 		},
@@ -218,7 +218,7 @@ func TestVerifyAccess(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rule, err := VerifyAccess(tt.cmd, conf)
+			rule, err := VerifyAccess(tt.args, conf)
 			if tt.expectErr {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errInclusive)
